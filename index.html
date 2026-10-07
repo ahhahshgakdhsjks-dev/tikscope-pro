@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TikScope Pro — Riset Produk TikTok & Shopee ala Kalodata / FastMoss</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}
+.sidebar-active{background:#eef2ff;color:#4f46e5!important;font-weight:600}
+.modal-bg{background:rgba(15,23,42,.6)}
+.spark{width:100px;height:28px}
+.badge-growth-up{background:#dcfce7;color:#15803d}.badge-growth-down{background:#fee2e2;color:#b91c1c}
+table th{white-space:nowrap}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans">
+<div class="flex min-h-screen">
+<!-- SIDEBAR -->
+<aside class="w-60 bg-white border-r hidden md:flex flex-col sticky top-0 h-screen">
+<div class="p-5 flex items-center gap-2">
+<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 text-white font-black flex items-center justify-center text-lg">T</div>
+<div><div class="font-extrabold text-lg leading-none">TikScope <span class="text-indigo-600">Pro</span></div><div class="text-[11px] text-slate-500">TikTok + Shopee Research</div></div>
+</div>
+<div class="px-4 pb-2">
+<div class="text-[11px] uppercase tracking-wider text-slate-400 font-bold mb-2">Platform</div>
+<div class="grid grid-cols-2 gap-2" id="platformSwitch">
+<button data-p="tiktok" class="plat-btn bg-black text-white rounded-lg py-2 text-sm font-bold">◉ TikTok</button>
+<button data-p="shopee" class="plat-btn bg-slate-100 rounded-lg py-2 text-sm font-bold text-orange-600">Shopee</button>
+</div>
+<select id="countrySel" class="mt-2 w-full border rounded-lg text-sm p-2"><option value="ID">🇮🇩 Indonesia</option><option value="MY">🇲🇾 Malaysia</option><option value="PH">🇵🇭 Philippines</option><option value="TH">🇹🇭 Thailand</option><option value="VN">🇻🇳 Vietnam</option></select>
+</div>
+<nav class="flex-1 overflow-y-auto px-3 space-y-1 text-sm" id="sideNav">
+<button data-tab="dashboard" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100 sidebar-active">📊 Dashboard</button>
+<button data-tab="produk" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🔥 Produk Explorer</button>
+<button data-tab="toko" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🏬 Toko Explorer</button>
+<button data-tab="kreator" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🎬 Kreator / Affiliate</button>
+<button data-tab="live" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">📡 Live & Video</button>
+<button data-tab="ads" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🎯 Ads Creative</button>
+<button data-tab="keyword" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🔑 Keyword & Kategori</button>
+<button data-tab="tracking" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">⭐ Tracking Saya <span id="trackCount" class="ml-1 bg-indigo-600 text-white text-[11px] px-1.5 rounded-full">0</span></button>
+<button data-tab="supplier" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🏭 Supplier 1688</button>
+<button data-tab="ongkir" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">🚚 Ongkir & Margin</button>
+<button data-tab="settings" class="side-btn w-full text-left px-3 py-2.5 rounded-lg hover:bg-slate-100">⚙️ API & Deploy</button>
+</nav>
+<div class="p-4 text-[11px] text-slate-500 border-t">Data demo lokal (mock) siap disambung ke API/scraper TikTok & Shopee. Klik Export untuk CSV.</div>
+</aside>
+
+<!-- MAIN -->
+<div class="flex-1 min-w-0">
+<header class="bg-white border-b sticky top-0 z-20 px-4 py-3 flex flex-wrap gap-2 items-center">
+<button class="md:hidden border rounded-lg px-3 py-1" onclick="document.querySelector('aside').classList.toggle('hidden')">☰</button>
+<div class="font-bold md:hidden">TikScope Pro</div>
+<input id="globalSearch" placeholder="🔍 Cari produk, toko, kreator... (cth: serum, kemeja, parfum)" class="flex-1 min-w-[220px] border rounded-xl px-4 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+<select id="dateRange" class="border rounded-xl px-3 py-2 text-sm"><option value="7">7 hari</option><option value="30" selected>30 hari</option><option value="90">90 hari</option></select>
+<button onclick="exportCSV()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-4 py-2 rounded-xl">⬇ Export CSV</button>
+<span id="apiBadge" class="text-[11px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700">● Mode Demo Lokal</span>
+<button id="userBtn" onclick="authModal()" class="border text-sm font-bold px-3 py-2 rounded-xl bg-slate-50">👤 Login</button>
+</header>
+<main class="p-4 md:p-6 max-w-[1280px] mx-auto" id="mainContent"></main>
+<footer class="text-center text-xs text-slate-400 pb-8">TikScope Pro • Clone fungsional Kalodata/FastMoss • TikTok Shop + Shopee • v1.0</footer>
+</div>
+</div>
+
+<!-- MODAL DETAIL -->
+<div id="modal" class="fixed inset-0 hidden z-50 modal-bg p-4 overflow-y-auto">
+<div class="bg-white max-w-4xl mx-auto rounded-2xl overflow-hidden">
+<div class="flex justify-between items-center p-4 border-b"><h3 id="modalTitle" class="font-extrabold text-lg">Detail Produk</h3><button onclick="closeModal()" class="text-2xl leading-none px-2">×</button></div>
+<div id="modalBody" class="p-5"></div>
+</div>
+</div>
+
+<script>
+// ============ HELPERS ============
+const Rp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+const K = n => n>=1e6?(n/1e6).toFixed(1)+'Jt':n>=1e3?(n/1e3).toFixed(1)+'Rb':n;
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const CATS=['Beauty','Fashion','Elektronik','Rumah Tangga','Kesehatan','Ibu & Bayi','Olahraga','Makanan','Otomotif','Pet Care'];
+const EMOJI={'Beauty':'💄','Fashion':'👗','Elektronik':'🎧','Rumah Tangga':'🏠','Kesehatan':'💊','Ibu & Bayi':'🍼','Olahraga':'🏋️','Makanan':'🍜','Otomotif':'🚗','Pet Care':'🐾'};
+const PNAMES={'Beauty':['Serum Niacinamide Brightening','Sunscreen Tone Up SPF50','Lip Tint Longlasting','Cushion Matte Cover','Retinol Night Cream','Parfum Pheromone Tahan 12 Jam'],'Fashion':['Kemeja Linen Oversize','Dress Midi Korean Style','Celana Jeans Highwaist','Hijab Pashmina Kaos','Sepatu Sneakers Putih','Tas Selempang Mini'],'Elektronik':['TWS Bluetooth 5.3 Low Latency','Mini Printer Thermal','Kipas Leher Portable','Powerbank 20000mAh 22.5W','Lampu LED RGB Musik','Mic Wireless Clip On'],'Rumah Tangga':['Vacuum Mini Portable','Rak Susun Serbaguna','Spray Mop Pel Pintar','Blender Portable USB','Gorden Blackout Premium','Storage Box Lipat'],'Kesehatan':['Susu Protein Whey','Vitamin C + Zinc','Alat Pijat Leher Elektrik','Masker Duckbill Isi 50','Sikat Gigi Elektrik','Minyak Telon Herbal'],'Ibu & Bayi':['Popok Bayi Premium','Susu Formula Anak','Stroller Lipat Cabin','Baby Carrier Ergonomis','Mainan Edukasi Montessori','Botol Susu Anti Kolik'],'Olahraga':['Matras Yoga Anti Slip','Dumbbell Set 20kg','Sepeda Statis Lipat','Resistance Band 5in1','Jersey Running Dryfit','Tas Gym Waterproof'],'Makanan':['Basreng Pedas Daun Jeruk','Seblak Instan Komplit','Kopi Susu Gula Aren','Dimsum Ayam Frozen','Keripik Pisang Coklat','Madu Murni Hutan'],'Otomotif':['Vacuum Mobil Mini','Parfum Mobil Kopi','Kamera Dashcam Depan Belakang','Sarung Jok Kulit','Pompa Ban Elektrik','Holder HP Motor Anti Goyang'],'Pet Care':['Cat Food Salmon 1kg','Pasir Kucing Wangi','Mainan Kucing Interaktif','Shampoo Anjing Anti Kutu','Kandang Lipat Portable','Vitamin Bulu Kucing']};
+const SHOPNAMES=['Glamora Official','UrbanStyle.id','TechZone Mall','HomeLiving Co','SehatAlami','BabyKita','SportHub Indo','SnackViral','AutoCare Pro','PetLovers ID','BeautyLab','FashionKu','GadgetMurah','DapurPintar','HerbalNusa'];
+const CREATORS=['@racunshopee','@reviewjujur','@dokterkulitku','@dapurviral','@unboxingaja','@outfitharian','@momlife.id','@gadgetinaja','@skincare101','@makanterus','@olahragayuk','@autotips'];
+function trendArr(base,vol=0.3){let a=[],v=base;for(let i=0;i<30;i++){v=Math.max(1,Math.round(v*(1+(Math.random()-0.45)*vol)));a.push(v)}return a}
+function genProducts(platform,n){let out=[],id=1;for(let i=0;i<n;i++){const c=pick(CATS);const nm=pick(PNAMES[c])+' '+(platform==='tiktok'?pick(['Viral','Best Seller','','Pro','Premium','Original']):pick(['Murah','COD','Grosir','','Star+','Mall']));const price=platform==='tiktok'?rnd(15000,850000):rnd(9000,650000);const sold=rnd(300,180000);const rev=sold*price;const rating=(3.8+Math.random()*1.2).toFixed(1);const growth=rnd(-25,180);const ratingN=rnd(50,45000);const shop=pick(SHOPNAMES);const comm=rnd(5,20);const s30=trendArr(Math.round(sold/30));out.push({id:platform+'-'+(id++),platform,cat:c,emoji:EMOJI[c],name:nm.trim(),price,sold,revenue:rev,rating,growth,reviews:ratingN,shop,comm,img:EMOJI[c],trend:s30,created:rnd(5,400)+' hari lalu',live:pick([true,false,false]),video:rnd(5,1200)})}return out}
+function genShops(n){return Array.from({length:n},(_,i)=>({name:SHOPNAMES[i%SHOPNAMES.length]+(i>=SHOPNAMES.length?' '+(Math.floor(i/SHOPNAMES.length)+1):''),products:rnd(20,800),sold:rnd(5000,900000),revenue:0,rating:(4.2+Math.random()*0.7).toFixed(1),followers:rnd(1000,2500000),growth:rnd(-10,120),cat:pick(CATS),response:rnd(85,99),location:pick(['Jakarta','Bandung','Surabaya','Tangerang','Medan','Semarang'])} )).map(s=>({...s,revenue:s.sold*rnd(25000,150000)}))}
+function genCreators(n){return Array.from({length:n},(_,i)=>({handle:CREATORS[i%CREATORS.length]+(i>=CREATORS.length?(Math.floor(i/CREATORS.length)+1):''),followers:rnd(50000,5200000),gmv:rnd(50000000,8500000000),videos:rnd(40,2500),live:rnd(2,120),eng:(2+Math.random()*12).toFixed(1),cat:pick(CATS),products:rnd(10,300)}))}
+const TIKTOK_PRODUCTS=genProducts('tiktok',150), SHOPEE_PRODUCTS=genProducts('shopee',120);
+const SHOPS=genShops(36), CREATORS_D=genCreators(36);
+const VIDEOS=Array.from({length:18},()=>({title:pick(['Racun TikTok! '+pick(PNAMES.Beauty),'Unboxing jujur '+pick(PNAMES.Elektronik),'Coba '+pick(PNAMES.Makanan)+' viral','Tutorial '+pick(PNAMES.Fashion)) ,views:rnd(50000,12000000),likes:rnd(2000,800000),comments:rnd(100,30000),products:rnd(1,5),creator:pick(CREATORS),gmv:rnd(5000000,900000000)}));
+const LIVES=Array.from({length:10},()=>({shop:pick(SHOPNAMES),title:'LIVE SALE '+rnd(50,90)+'% + Giveaway',viewers:rnd(500,85000),duration:rnd(1,8)+' jam',gmv:rnd(10000000,1500000000),products:rnd(20,200)}));
+const ADS=Array.from({length:16},()=>({title:pick(PNAMES.Beauty)+' — Video Ads',ctr:(0.8+Math.random()*3).toFixed(2),cvr:(1+Math.random()*8).toFixed(2),spend:rnd(500000,50000000),roas:(1+Math.random()*6).toFixed(1),views:rnd(100000,20000000),creator:pick(CREATORS)}));
+const KEYWORDS=['serum niacinamide','sunscreen tone up','kemeja linen pria','tws bluetooth','vacuum mini','basreng viral','parfum pheromone','stroller lipat','dumbbell 10kg','dashcam mobil','cat food salmon','k赞 kopi susu'].map(k=>({kw:k,vol:rnd(20000,900000),comp:pick(['Rendah','Sedang','Tinggi']),cpc:rnd(800,4500),trend:rnd(-15,90),products:rnd(500,50000)}));
+
+let state={tab:'dashboard',platform:'tiktok',cat:'Semua',minPrice:'',maxPrice:'',minSold:'',minRev:'',sort:'sold_desc',page:1,perPage:15,liveTab:'video',tracked:JSON.parse(localStorage.getItem('tikscope_track')||'[]')};
+function saveTrack(){localStorage.setItem('tikscope_track',JSON.stringify(state.tracked));document.getElementById('trackCount').textContent=state.tracked.length}
+function allProducts(){return state.platform==='tiktok'?TIKTOK_PRODUCTS:SHOPEE_PRODUCTS}
+function filteredProducts(){let d=[...allProducts()];const q=document.getElementById('globalSearch')?.value.toLowerCase()||'';
+if(q) d=d.filter(p=>(p.name+p.shop+p.cat).toLowerCase().includes(q));
+if(state.cat!=='Semua') d=d.filter(p=>p.cat===state.cat);
+if(state.minPrice) d=d.filter(p=>p.price>=+state.minPrice);
+if(state.maxPrice) d=d.filter(p=>p.price<=+state.maxPrice);
+if(state.minSold) d=d.filter(p=>p.sold>=+state.minSold);
+if(state.minRev) d=d.filter(p=>p.revenue>=+state.minRev);
+const s=state.sort;const m={'sold_desc':(a,b)=>b.sold-a.sold,'sold_asc':(a,b)=>a.sold-b.sold,'rev_desc':(a,b)=>b.revenue-a.revenue,'price_desc':(a,b)=>b.price-a.price,'price_asc':(a,b)=>a.price-b.price,'growth_desc':(a,b)=>b.growth-a.growth,'rating_desc':(a,b)=>b.rating-a.rating};
+d.sort(m[s]||m.sold_desc);return d}
+function sparkSVG(arr,color='#4f46e5'){const mx=Math.max(...arr),mn=Math.min(...arr);const pts=arr.map((v,i)=>`${(i/(arr.length-1)*100).toFixed(1)},${(26-((v-mn)/((mx-mn)||1))*22).toFixed(1)}`).join(' ');return `<svg class="spark" viewBox="0 0 100 28"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`}
+
+// ============ RENDER ============
+let charts=[];
+function killCharts(){charts.forEach(c=>{try{c.destroy()}catch(e){}});charts=[]}
+function render(){killCharts();const el=document.getElementById('mainContent');const t=state.tab;
+document.querySelectorAll('.side-btn').forEach(b=>b.classList.toggle('sidebar-active',b.dataset.tab===t));
+if(t==='dashboard') el.innerHTML=viewDashboard();
+else if(t==='produk') el.innerHTML=viewProduk();
+else if(t==='toko') el.innerHTML=viewToko();
+else if(t==='kreator') el.innerHTML=viewKreator();
+else if(t==='live') el.innerHTML=viewLive();
+else if(t==='ads') el.innerHTML=viewAds();
+else if(t==='keyword') el.innerHTML=viewKeyword();
+else if(t==='tracking') el.innerHTML=viewTracking();
+else if(t==='supplier') el.innerHTML=viewSupplier();
+else if(t==='ongkir') el.innerHTML=viewOngkir();
+else if(t==='settings') el.innerHTML=viewSettings();
+bindAfter();saveTrack();updateUserBtn();checkAPI();
+}
+function kpiCard(label,val,sub,color){return `<div class="bg-white rounded-2xl p-4 border shadow-sm"><div class="text-xs text-slate-500 font-semibold">${label}</div><div class="text-2xl font-extrabold ${color}">${val}</div><div class="text-xs text-slate-500 mt-1">${sub}</div></div>`}
+function viewDashboard(){const prods=allProducts();const gmv=prods.reduce((a,b)=>a+b.revenue,0);const sold=prods.reduce((a,b)=>a+b.sold,0);
+const top=[...prods].sort((a,b)=>b.revenue-a.revenue).slice(0,5);
+const catMap={};prods.forEach(p=>catMap[p.cat]=(catMap[p.cat]||0)+p.revenue);
+setTimeout(()=>{const c1=document.getElementById('chGmv');if(c1){charts.push(new Chart(c1,{type:'line',data:{labels:Array.from({length:30},(_,i)=>'H-'+(30-i)),datasets:[{label:'GMV '+state.platform.toUpperCase(),data:trendArr(Math.round(gmv/30),0.25),borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.15)',fill:true,tension:.4}]},options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e9).toFixed(1)+'M'}}}}}))}
+const c2=document.getElementById('chCat');if(c2){charts.push(new Chart(c2,{type:'doughnut',data:{labels:Object.keys(catMap),datasets:[{data:Object.values(catMap),backgroundColor:['#4f46e5','#ec4899','#10b981','#f59e0b','#3b82f6','#8b5cf6','#ef4444','#14b8a6','#f97316','#64748b']}]},options:{plugins:{legend:{position:'right'}}}}))}},50);
+return `<h1 class="text-2xl font-extrabold mb-1">Dashboard ${state.platform==='tiktok'?'TikTok Shop':'Shopee'} 🇮🇩</h1><p class="text-sm text-slate-500 mb-4">Ringkasan pasar ${+document.getElementById('dateRange').value} hari terakhir • Gaya Kalodata / FastMoss</p>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+${kpiCard('Total GMV Terpantau',Rp(gmv),'▲ +18.4% vs periode lalu','text-indigo-700')}
+${kpiCard('Unit Terjual',K(sold),'▲ +12.1%','text-emerald-700')}
+${kpiCard('Produk Terpantau',prods.length+' SKU',SHOPS.length+' toko aktif','')}
+${kpiCard('Rata-rata Komisi',state.platform==='tiktok'?'12.5%':'8.2%','Peluang affiliate tinggi','text-pink-600')}
+</div>
+<div class="grid lg:grid-cols-3 gap-4 mb-4">
+<div class="lg:col-span-2 bg-white rounded-2xl border p-4"><div class="font-bold mb-2">📈 Tren GMV 30 Hari</div><canvas id="chGmv" height="120"></canvas></div>
+<div class="bg-white rounded-2xl border p-4"><div class="font-bold mb-2">🍩 GMV per Kategori</div><canvas id="chCat" height="220"></canvas></div>
+</div>
+<div class="grid lg:grid-cols-2 gap-4">
+<div class="bg-white rounded-2xl border p-4"><div class="font-bold mb-3">🏆 Top 5 Produk Revenue</div>${top.map((p,i)=>`<div class="flex items-center gap-3 py-2 border-b last:border-0"><div class="text-2xl">${p.emoji}</div><div class="flex-1 min-w-0"><div class="text-sm font-bold truncate">${p.name}</div><div class="text-xs text-slate-500">${p.shop} • ${K(p.sold)} terjual</div></div><div class="text-right"><div class="font-extrabold text-sm">${Rp(p.revenue)}</div><div class="text-[11px] ${p.growth>=0?'text-green-600':'text-red-500'} font-bold">${p.growth>=0?'▲':'▼'} ${p.growth}%</div></div></div>`).join('')}</div>
+<div class="bg-white rounded-2xl border p-4"><div class="font-bold mb-3">📡 Live Terpanas Hari Ini</div>${LIVES.slice(0,4).map(l=>`<div class="py-2 border-b last:border-0"><div class="text-sm font-bold">🔴 ${l.title}</div><div class="text-xs text-slate-500">${l.shop} • 👁 ${K(l.viewers)} • GMV ${Rp(l.gmv)}</div></div>`).join('')}<button onclick="go('live')" class="mt-3 text-indigo-600 text-sm font-bold">Lihat semua Live & Video →</button></div>
+</div>`}
+
+function filterBar(){return `<div class="bg-white rounded-2xl border p-4 mb-4 grid md:grid-cols-6 gap-2 text-sm">
+<select id="fCat" class="border rounded-lg p-2"><option>Semua</option>${CATS.map(c=>`<option ${state.cat===c?'selected':''}>${c}</option>`).join('')}</select>
+<input id="fMinP" type="number" placeholder="Harga min" value="${state.minPrice}" class="border rounded-lg p-2">
+<input id="fMaxP" type="number" placeholder="Harga max" value="${state.maxPrice}" class="border rounded-lg p-2">
+<input id="fMinS" type="number" placeholder="Min terjual" value="${state.minSold}" class="border rounded-lg p-2">
+<select id="fSort" class="border rounded-lg p-2"><option value="sold_desc">Terlaris</option><option value="rev_desc">Revenue tertinggi</option><option value="growth_desc">Growth tercepat</option><option value="price_asc">Termurah</option><option value="price_desc">Termahal</option><option value="rating_desc">Rating tertinggi</option></select>
+<button onclick="applyFilter()" class="bg-black text-white rounded-lg font-bold">Filter</button></div>`}
+function viewProduk(){const d=filteredProducts();const pages=Math.ceil(d.length/state.perPage);const rows=d.slice((state.page-1)*state.perPage,state.page*state.perPage);
+return `<div class="flex items-center justify-between mb-3 flex-wrap gap-2"><h1 class="text-2xl font-extrabold">🔥 Produk Explorer — ${state.platform==='tiktok'?'TikTok Shop':'Shopee'}</h1><div class="flex items-center gap-2"><span class="text-sm text-slate-500">${d.length} produk</span><button onclick="fetchLive(document.getElementById('globalSearch').value||'serum')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-2 rounded-xl">⚡ Tarik Data Live Apify</button></div></div>${filterBar()}
+<div class="bg-white rounded-2xl border overflow-x-auto"><table class="w-full text-sm min-w-[900px]"><thead class="bg-slate-50 text-slate-500 text-xs"><tr><th class="p-3 text-left">Produk</th><th class="p-3 text-right">Harga</th><th class="p-3 text-right">Terjual</th><th class="p-3 text-right">Revenue</th><th class="p-3">Tren 30h</th><th class="p-3 text-right">Growth</th><th class="p-3">Toko</th><th class="p-3">Aksi</th></tr></thead><tbody>
+${rows.map(p=>{const tr=state.tracked.includes(p.id);return `<tr class="border-t hover:bg-indigo-50/40"><td class="p-3"><div class="flex gap-2 items-center"><div class="text-2xl bg-slate-100 rounded-lg w-10 h-10 flex items-center justify-center">${p.emoji}</div><div><div class="font-bold line-clamp-1 max-w-[240px]">${p.name}</div><div class="text-[11px] text-slate-500">⭐ ${p.rating} (${K(p.reviews)}) • ${p.cat} • komisi ${p.comm}%</div></div></div></td>
+<td class="p-3 text-right font-bold">${Rp(p.price)}</td><td class="p-3 text-right">${K(p.sold)}</td><td class="p-3 text-right font-bold text-indigo-700">${Rp(p.revenue)}</td><td class="p-3">${sparkSVG(p.trend,p.growth>=0?'#16a34a':'#dc2626')}</td>
+<td class="p-3 text-right"><span class="text-[11px] font-bold px-2 py-1 rounded-full ${p.growth>=0?'badge-growth-up':'badge-growth-down'}">${p.growth>=0?'▲':'▼'} ${p.growth}%</span></td>
+<td class="p-3 text-xs">${p.shop}</td>
+<td class="p-3 whitespace-nowrap"><button onclick="detail('${p.id}')" class="text-indigo-600 font-bold">Detail</button> <button onclick="track('${p.id}')" class="ml-1 ${tr?'text-amber-500':'text-slate-400'} font-bold">${tr?'★':'☆'}</button></td></tr>`}).join('')}</tbody></table></div>
+<div class="flex gap-2 mt-3 items-center text-sm"><button onclick="paging(-1)" class="border bg-white px-3 py-1 rounded-lg">←</button><span>Halaman ${state.page} / ${pages}</span><button onclick="paging(1)" class="border bg-white px-3 py-1 rounded-lg">→</button></div>`}
+
+function viewToko(){const s=[...SHOPS].sort((a,b)=>b.revenue-a.revenue);
+return `<h1 class="text-2xl font-extrabold mb-3">🏬 Toko Explorer</h1><div class="grid md:grid-cols-3 gap-3">${s.map(t=>`<div class="bg-white rounded-2xl border p-4"><div class="font-extrabold">${t.name}</div><div class="text-xs text-slate-500 mb-2">${t.cat} • 📍 ${t.location} • ⭐ ${t.rating} • Respon ${t.response}%</div><div class="grid grid-cols-3 text-center text-sm my-2"><div><div class="font-extrabold">${K(t.sold)}</div><div class="text-[11px] text-slate-500">Terjual</div></div><div><div class="font-extrabold text-indigo-700">${(t.revenue/1e9).toFixed(1)}M</div><div class="text-[11px] text-slate-500">Revenue</div></div><div><div class="font-extrabold">${K(t.followers)}</div><div class="text-[11px] text-slate-500">Followers</div></div></div><div class="text-xs font-bold ${t.growth>=0?'text-green-600':'text-red-500'}">${t.growth>=0?'▲':'▼'} Growth ${t.growth}% • ${t.products} produk</div></div>`).join('')}</div>`}
+function viewKreator(){const c=[...CREATORS_D].sort((a,b)=>b.gmv-a.gmv);
+return `<h1 class="text-2xl font-extrabold mb-3">🎬 Kreator / Affiliate Top</h1><div class="bg-white rounded-2xl border overflow-x-auto"><table class="w-full text-sm min-w-[800px]"><thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="p-3 text-left">Kreator</th><th class="p-3 text-right">Followers</th><th class="p-3 text-right">GMV</th><th class="p-3 text-right">Video</th><th class="p-3 text-right">LIVE</th><th class="p-3 text-right">Engagement</th><th class="p-3">Niche</th></tr></thead><tbody>${c.map(k=>`<tr class="border-t"><td class="p-3 font-bold">${k.handle}</td><td class="p-3 text-right">${K(k.followers)}</td><td class="p-3 text-right font-bold text-indigo-700">${Rp(k.gmv)}</td><td class="p-3 text-right">${k.videos}</td><td class="p-3 text-right">${k.live}x</td><td class="p-3 text-right">${k.eng}%</td><td class="p-3 text-xs">${k.cat}</td></tr>`).join('')}</tbody></table></div>`}
+function viewLive(){const tabs=`<div class="flex gap-2 mb-4"><button onclick="setLiveTab('video')" class="px-4 py-2 rounded-xl text-sm font-bold ${state.liveTab==='video'?'bg-black text-white':'bg-white border'}">🎥 Video Trending</button><button onclick="setLiveTab('live')" class="px-4 py-2 rounded-xl text-sm font-bold ${state.liveTab==='live'?'bg-black text-white':'bg-white border'}">🔴 LIVE Panas</button></div>`;
+if(state.liveTab==='video') return `<h1 class="text-2xl font-extrabold mb-3">📡 Live & Video Analytics</h1>${tabs}<div class="grid md:grid-cols-3 gap-3">${VIDEOS.map(v=>`<div class="bg-white rounded-2xl border p-4"><div class="text-4xl mb-2">🎬</div><div class="font-bold text-sm line-clamp-2 mb-1">${v.title}</div><div class="text-xs text-slate-500">${v.creator} • 🛒 ${v.products} produk</div><div class="grid grid-cols-3 text-center mt-3 text-sm"><div><b>${K(v.views)}</b><div class="text-[11px] text-slate-500">Views</div></div><div><b>${K(v.likes)}</b><div class="text-[11px] text-slate-500">Likes</div></div><div><b class="text-indigo-700">${(v.gmv/1e6).toFixed(0)}Jt</b><div class="text-[11px] text-slate-500">GMV</div></div></div></div>`).join('')}</div>`;
+return `<h1 class="text-2xl font-extrabold mb-3">📡 Live & Video Analytics</h1>${tabs}<div class="grid md:grid-cols-2 gap-3">${LIVES.map(l=>`<div class="bg-white rounded-2xl border p-4"><div class="flex items-center gap-2"><span class="bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded">● LIVE</span><b>${l.shop}</b></div><div class="text-sm mt-1 font-bold">${l.title}</div><div class="text-xs text-slate-500 mt-1">👁 ${K(l.viewers)} menonton • ⏱ ${l.duration} • 🛒 ${l.products} produk • 💰 ${Rp(l.gmv)}</div></div>`).join('')}</div>`}
+function viewAds(){return `<h1 class="text-2xl font-extrabold mb-1">🎯 Ads Creative Center</h1><p class="text-sm text-slate-500 mb-3">Iklan Spark Ads / TikTok Shop Ads berperfoma tinggi — tiru hook-nya.</p><div class="grid md:grid-cols-3 gap-3">${ADS.map(a=>`<div class="bg-white rounded-2xl border p-4"><div class="text-3xl mb-1">📢</div><div class="font-bold text-sm">${a.title}</div><div class="text-xs text-slate-500 mb-2">by ${a.creator}</div><div class="text-xs grid grid-cols-2 gap-1"><div>CTR: <b>${a.ctr}%</b></div><div>CVR: <b>${a.cvr}%</b></div><div>Spend: <b>${Rp(a.spend)}</b></div><div>ROAS: <b class="text-green-700">${a.roas}x</b></div></div><div class="text-xs mt-1">👁 ${K(a.views)} views</div></div>`).join('')}</div>`}
+function viewKeyword(){return `<h1 class="text-2xl font-extrabold mb-3">🔑 Keyword & Kategori</h1><div class="grid lg:grid-cols-2 gap-4"><div class="bg-white rounded-2xl border overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="p-3 text-left">Keyword</th><th class="p-3 text-right">Volume</th><th class="p-3">Kompetisi</th><th class="p-3 text-right">Tren</th></tr></thead><tbody>${KEYWORDS.map(k=>`<tr class="border-t"><td class="p-3 font-bold">${k.kw}</td><td class="p-3 text-right">${K(k.vol)}/bln</td><td class="p-3 text-center"><span class="text-[11px] px-2 py-1 rounded-full font-bold ${k.comp==='Rendah'?'badge-growth-up':k.comp==='Sedang'?'bg-amber-100 text-amber-700':'badge-growth-down'}">${k.comp}</span></td><td class="p-3 text-right font-bold ${k.trend>=0?'text-green-600':'text-red-500'}">${k.trend>=0?'▲':'▼'} ${k.trend}%</td></tr>`).join('')}</tbody></table></div>
+<div class="bg-white rounded-2xl border p-4"><div class="font-bold mb-2">Peluang Kategori (Skor Opportunity)</div>${CATS.map(c=>{const s=rnd(55,98);return `<div class="mb-2"><div class="flex justify-between text-sm"><span>${EMOJI[c]} ${c}</span><b>${s}/100</b></div><div class="h-2 bg-slate-100 rounded-full"><div class="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-pink-500" style="width:${s}%"></div></div></div>`}).join('')}</div></div>`}
+function viewTracking(){const items=[...TIKTOK_PRODUCTS,...SHOPEE_PRODUCTS].filter(p=>state.tracked.includes(p.id));
+if(!items.length) return `<h1 class="text-2xl font-extrabold mb-3">⭐ Tracking Saya</h1><div class="bg-white rounded-2xl border p-10 text-center text-slate-500">Belum ada produk di-track.<br>Klik ☆ di Produk Explorer untuk memantau produk.</div>`;
+return `<h1 class="text-2xl font-extrabold mb-3">⭐ Tracking Saya (${items.length})</h1><div class="bg-white rounded-2xl border overflow-x-auto"><table class="w-full text-sm min-w-[800px]"><thead class="bg-slate-50 text-xs text-slate-500"><tr><th class="p-3 text-left">Produk</th><th class="p-3 text-right">Harga</th><th class="p-3 text-right">Terjual</th><th class="p-3 text-right">Revenue</th><th class="p-3 text-right">Growth</th><th class="p-3">Hapus</th></tr></thead><tbody>${items.map(p=>`<tr class="border-t"><td class="p-3 font-bold">${p.emoji} ${p.name}<div class="text-[11px] text-slate-500 font-normal">[${p.platform}] ${p.shop}</div></td><td class="p-3 text-right">${Rp(p.price)}</td><td class="p-3 text-right">${K(p.sold)}</td><td class="p-3 text-right font-bold">${Rp(p.revenue)}</td><td class="p-3 text-right">${p.growth}%</td><td class="p-3"><button onclick="track('${p.id}')" class="text-red-500 font-bold">✕</button> <button onclick="detail('${p.id}')" class="text-indigo-600 font-bold ml-2">Detail</button></td></tr>`).join('')}</tbody></table></div>`}
+
+// ============ ACTIONS ============
+function go(t){state.tab=t;state.page=1;render()}
+document.querySelectorAll('.side-btn').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+document.querySelectorAll('.plat-btn').forEach(b=>b.onclick=()=>{state.platform=b.dataset.p;document.querySelectorAll('.plat-btn').forEach(x=>x.className='plat-btn bg-slate-100 rounded-lg py-2 text-sm font-bold text-slate-600');b.className='plat-btn rounded-lg py-2 text-sm font-bold '+(state.platform==='tiktok'?'bg-black text-white':'bg-orange-500 text-white');state.page=1;render()});
+document.getElementById('globalSearch').addEventListener('input',()=>{if(state.tab!=='produk')state.tab='produk';state.page=1;render();keepFocus()});
+function keepFocus(){const s=document.getElementById('globalSearch');s.focus();s.setSelectionRange(s.value.length,s.value.length)}
+function bindAfter(){const f=document.getElementById('fSort');if(f)f.value=state.sort;if(state.tab==='ongkir'){setTimeout(()=>{try{hitungOngkir()}catch(e){}},50)}const p=document.getElementById('provSel');if(p)p.value=localStorage.getItem('tikscope_prov')||'apify';if(p)p.onchange=()=>localStorage.setItem('tikscope_prov',p.value)}
+function applyFilter(){state.cat=document.getElementById('fCat').value;state.minPrice=document.getElementById('fMinP').value;state.maxPrice=document.getElementById('fMaxP').value;state.minSold=document.getElementById('fMinS').value;state.sort=document.getElementById('fSort').value;state.page=1;render()}
+function paging(d){state.page=Math.max(1,state.page+d);render();window.scrollTo(0,0)}
+function setLiveTab(v){state.liveTab=v;render()}
+function track(id){if(state.tracked.includes(id))state.tracked=state.tracked.filter(x=>x!==id);else state.tracked.push(id);render()}
+function exportCSV(){const d=state.tab==='tracking'?[...TIKTOK_PRODUCTS,...SHOPEE_PRODUCTS].filter(p=>state.tracked.includes(p.id)):filteredProducts();
+const rows=[['platform','nama','kategori','harga','terjual','revenue','rating','growth','toko','komisi']];d.forEach(p=>rows.push([p.platform,'"'+p.name.replace(/"/g,'')+'"',p.cat,p.price,p.sold,p.revenue,p.rating,p.growth+'%','"'+p.shop+'"',p.comm+'%']));
+const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`tikscope-${state.platform}-produk.csv`;a.click()}
+function detail(id){const p=[...TIKTOK_PRODUCTS,...SHOPEE_PRODUCTS].find(x=>x.id===id);if(!p)return;
+const score=Math.min(99,Math.round(50+p.growth*0.4+p.rating*5));
+document.getElementById('modalTitle').textContent=p.emoji+' '+p.name;
+document.getElementById('modalBody').innerHTML=`<div class="grid md:grid-cols-2 gap-4">
+<div><div class="text-sm space-y-1"><div>Harga: <b>${Rp(p.price)}</b> • Terjual: <b>${K(p.sold)}</b></div><div>Revenue 30h: <b class="text-indigo-700">${Rp(p.revenue)}</b> • ⭐ ${p.rating} (${K(p.reviews)})</div><div>Toko: <b>${p.shop}</b> • Komisi: <b class="text-pink-600">${p.comm}% (${Rp(p.price*p.comm/100)}/pcs)</b></div><div>Growth: <b class="${p.growth>=0?'text-green-600':'text-red-500'}">${p.growth}%</b> • Dibuat: ${p.created}</div>
+<div class="mt-3 bg-indigo-50 rounded-xl p-3 text-sm">🤖 <b>Insight AI:</b> Skor opportunity <b>${score}/100</b>. ${score>75?'Produk WINNER — gas iklan + cari supplier serupa di 1688/Shopee.':score>55?'Produk potensial — cek 3 kompetitor & bedakan angle konten.':'Produk stagnan — hindari stok banyak, jadikan upsell saja.'}</div>
+<div class="mt-3"><div class="font-bold text-sm mb-1">🧮 Kalkulator Profit</div><div class="flex gap-2 text-sm"><input id="cHpp" type="number" placeholder="HPP/pcs" class="border rounded-lg p-2 w-full"><input id="cAds" type="number" placeholder="Biaya iklan/pcs" value="5000" class="border rounded-lg p-2 w-full"><button onclick="calc(${p.price},${p.comm})" class="bg-indigo-600 text-white px-3 rounded-lg font-bold">Hitung</button></div><div id="cOut" class="text-sm mt-2 font-bold"></div></div>
+<button onclick="track('${p.id}')" class="mt-3 bg-amber-400 px-4 py-2 rounded-xl font-bold text-sm">⭐ Track Produk Ini</button></div></div>
+<div><div class="font-bold text-sm mb-1">📈 Tren Penjualan 30 Hari</div><canvas id="chDetail" height="180"></canvas></div></div>`;
+document.getElementById('modal').classList.remove('hidden');
+charts.push(new Chart(document.getElementById('chDetail'),{type:'line',data:{labels:p.trend.map((_,i)=>'H'+(i+1)),datasets:[{label:'Terjual/hari',data:p.trend,borderColor:'#4f46e5',backgroundColor:'rgba(79,70,229,.15)',fill:true,tension:.35}]},options:{plugins:{legend:{display:false}}}}))}
+function calc(price,comm){const hpp=+document.getElementById('cHpp').value||0;const ads=+document.getElementById('cAds').value||0;const fee=price*0.08;const kom=price*comm/100;const profit=price-hpp-ads-fee;const margin=(profit/price*100).toFixed(1);document.getElementById('cOut').innerHTML=`Profit bersih: <span class="${profit>0?'text-green-600':'text-red-500'}">${Rp(profit)}/pcs (${margin}%)</span> <span class="font-normal text-slate-500">| fee ${Rp(fee)} • afiliasi ${Rp(kom)}</span>`}
+function closeModal(){document.getElementById('modal').classList.add('hidden')}
+// ============ V2: AUTH, SUPPLIER, ONGKIR, API ============
+function getUser(){return JSON.parse(localStorage.getItem('tikscope_user')||'null')}
+function updateUserBtn(){const u=getUser();const b=document.getElementById('userBtn');if(b)b.textContent=u?('👤 '+u.name):'👤 Login'}
+function authModal(){const u=getUser();
+if(u){if(confirm('Logout dari '+u.name+'?')){localStorage.removeItem('tikscope_user');render()}return}
+document.getElementById('modalTitle').textContent='👤 Login / Daftar (Demo Lokal)';
+document.getElementById('modalBody').innerHTML=`<div class="max-w-sm mx-auto text-sm"><input id="authName" placeholder="Nama kamu / nama toko" class="border rounded-xl p-3 w-full mb-2"><input id="authMail" placeholder="Email / WA" class="border rounded-xl p-3 w-full mb-3"><button onclick="doLogin()" class="bg-black text-white w-full py-3 rounded-xl font-bold">Masuk & Simpan Tracking</button><p class="text-xs text-slate-500 mt-2">* Demo lokal via localStorage. Untuk multi-device / tim, sambungkan ke Supabase/Firebase di tab ⚙️ API & Deploy. Nanti tracking tersync cloud.</p></div>`;
+document.getElementById('modal').classList.remove('hidden')}
+function doLogin(){const n=document.getElementById('authName').value||'Seller';const m=document.getElementById('authMail').value||'';localStorage.setItem('tikscope_user',JSON.stringify({name:n,email:m,loginAt:Date.now()}));closeModal();render()}
+function viewSupplier(){const q=(document.getElementById('globalSearch')?.value||'serum').slice(0,40);
+const base=rnd(8000,60000);
+const sup=[{s:'1688.com',price:Math.round(base*0.55),moq:rnd(50,500),eta:'12-18 hari',ship:Rp(rnd(8000,18000))+' /pcs via forwarder'},{s:'Taobao / Tmall',price:Math.round(base*0.7),moq:rnd(10,100),eta:'10-15 hari',ship:Rp(rnd(12000,25000))+' /pcs'},{s:'Shopee Grosir JKT',price:Math.round(base*0.85),moq:rnd(5,50),eta:'2-4 hari',ship:'COD / Instant'},{s:'Supplier Lokal Bandung',price:Math.round(base*1.05),moq:rnd(2,20),eta:'1-2 hari',ship:'Bisa retur'}];
+return `<h1 class="text-2xl font-extrabold mb-1">🏭 Supplier Finder 1688</h1><p class="text-sm text-slate-500 mb-3">Bandingkan HPP untuk: <b>"${q}"</b> — ketik nama produk di search atas untuk ganti. Link 1688 auto-generated.</p>
+<div class="grid md:grid-cols-2 gap-3">${sup.map(o=>{const jual=base*2.2;const margin=Math.round((jual-o.price)/jual*100);return `<div class="bg-white rounded-2xl border p-4"><div class="font-extrabold">${o.s}</div><div class="text-xs text-slate-500">MOQ ${o.moq} pcs • ETA ${o.eta} • ${o.ship}</div><div class="mt-2 text-sm">HPP: <b>${Rp(o.price)}</b> → simulasi jual ${Rp(jual)} = margin <b class="${margin>50?'text-green-600':'text-amber-600'}">${margin}%</b></div><div class="flex gap-2 mt-3"><a target="_blank" href="https://www.1688.com/offer_search/offer_search.html?keywords=${encodeURIComponent(q)}" class="text-xs bg-black text-white px-3 py-2 rounded-lg font-bold">Buka di 1688 ↗</a><button onclick="copySup('${o.s}',${o.price})" class="text-xs border px-3 py-2 rounded-lg font-bold">Pakai HPP ini</button></div></div>`}).join('')}</div>
+<div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mt-4 text-sm">💡 <b>Cara pakai pro:</b> 1) Cari produk winner di Produk Explorer → 2) Klik Detail → 3) Cari judul sama di 1688 → 4) Chat supplier minta video real + MOQ kecil dulu → 5) Hitung ulang di kalkulator profit + ongkir.</div>`}
+function copySup(s,p){localStorage.setItem('tikscope_hpp',p);alert('HPP '+Rp(p)+' dari '+s+' disimpan! Buka Detail Produk → Kalkulator Profit, tempel angkanya.');go('produk')}
+function viewOngkir(){return `<h1 class="text-2xl font-extrabold mb-3">🚚 Kalkulator Ongkir & Margin Bersih</h1>
+<div class="bg-white rounded-2xl border p-4 mb-4 grid md:grid-cols-5 gap-2 text-sm">
+<input id="oPrice" type="number" placeholder="Harga jual" value="89000" class="border rounded-lg p-2">
+<input id="oHpp" type="number" placeholder="HPP" value="${localStorage.getItem('tikscope_hpp')||25000}" class="border rounded-lg p-2">
+<input id="oWeight" type="number" placeholder="Berat gram" value="500" class="border rounded-lg p-2">
+<select id="oFrom" class="border rounded-lg p-2"><option>Jakarta</option><option>Bandung</option><option>Surabaya</option><option>Medan</option><option>Makassar</option></select>
+<select id="oTo" class="border rounded-lg p-2"><option>Surabaya</option><option>Jakarta</option><option>Medan</option><option>Makassar</option><option>Bandung</option></select>
+</div>
+<div class="grid md:grid-cols-3 gap-3" id="ongkirList"></div>
+<div class="mt-3"><button onclick="hitungOngkir()" class="bg-black text-white px-5 py-2.5 rounded-xl text-sm font-bold">Hitung Semua Ekspedisi</button></div>`}
+function hitungOngkir(){const price=+document.getElementById('oPrice').value||0;const hpp=+document.getElementById('oHpp').value||0;const w=Math.max(1,(+document.getElementById('oWeight').value||500)/1000);
+const ex=[['JNE OKE',9000,1],['JNE REG',12000,1.1],['J&T Express',11000,1.05],['SiCepat REG',10000,1],['Ninja Xpress',9500,0.95],['AnterAja',10500,1],['JNE YES',22000,1.4],['GoSend SameDay',18000,1.2],['Shopee Express',9000,0.9]];
+const el=document.getElementById('ongkirList');if(!el)return;
+el.innerHTML=ex.map(([n,base,mul])=>{const cost=Math.round(base*w*mul/500)*500;const fee=Math.round(price*0.08);const profit=price-hpp-fee-3000;return `<div class="bg-white rounded-2xl border p-4 text-sm"><div class="font-extrabold">${n}</div><div class="text-xs text-slate-500">Estimasi ${Rp(cost)} ${(w).toFixed(1)}kg</div><div class="mt-1">Profit seller (di luar ongkir, buyer bayar): <b class="${profit>0?'text-green-600':'text-red-500'}">${Rp(profit)}</b></div><div class="text-[11px] text-slate-500">fee ${Rp(fee)} • iklan Rp3.000 • HPP ${Rp(hpp)}</div></div>`}).join('')}
+function viewSettings(){const api=localStorage.getItem('tikscope_api')||'';return `<h1 class="text-2xl font-extrabold mb-3">⚙️ API & Deploy — Naik ke Data Real</h1>
+<div class="grid lg:grid-cols-2 gap-4">
+<div class="bg-white rounded-2xl border p-5 text-sm space-y-3"><div class="font-bold text-base">🔌 Sambung Backend (Live API)</div>
+<p class="text-slate-500">Default Demo Lokal. Kalau backend <code>server.js</code> sudah jalan, tempel URL-nya (cth: <code>http://localhost:3000</code>) lalu klik Test. App otomatis pakai <code>/api/products?platform=tiktok</code> kalau sukses, fallback ke mock kalau gagal.</p>
+<input id="apiUrl" value="${api}" placeholder="http://localhost:3000" class="border rounded-xl p-3 w-full">
+<div class="flex gap-2 flex-wrap"><select id="provSel" class="border rounded-xl p-2 text-sm"><option value="apify">Provider: Apify (riset pasar)</option><option value="brightdata">Provider: Bright Data (riset pasar)</option><option value="mock">Provider: Mock demo</option></select><button onclick="saveAPI()" class="bg-black text-white px-4 py-2 rounded-xl font-bold">Simpan & Test</button><button onclick="clearAPI()" class="border px-4 py-2 rounded-xl">Reset Demo</button><button onclick="provStatus()" class="border px-4 py-2 rounded-xl">Cek Semua Provider</button></div><div id="apiOut" class="text-xs"></div><div id="provOut" class="text-xs"></div>
+<div class="bg-slate-50 rounded-xl p-3 text-xs">Endpoint backend:<br><code>GET /api/products?platform=tiktok&q=serum&region=ID&limit=30</code><br><code>GET /api/products?platform=shopee&q=serum&market=id</code><br><code>GET /api/test-apify • GET /api/health • GET /api/trending</code></div>
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs"><b>🔑 Apify — cara isi token (2 menit):</b><br>1. Daftar <b>console.apify.com/sign-up</b> (free $5 ≈ 500–1000 produk)<br>2. Settings → Integrations → copy token (<code>apify_api_...</code>)<br>3. Di folder <code>backend/</code>: copy <code>.env.example</code> jadi <code>.env</code>, tempel token, <code>npm install && node server.js</code><br>4. Klik <b>Test Apify</b> di bawah. TikTok pakai <code>sian.agency/tiktok-shop-scraper</code> (~$5/1k), Shopee pakai <code>zen-studio/shopee-product-scraper</code>. Catatan: TikTok region <b>ID dihapus Apify 26-08-2026</b> → otomatis pakai MY sebagai proxy SEA.</div>
+<div class="flex gap-2 flex-wrap"><button onclick="testApify()" class="bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold">Test Apify</button><button onclick="testBD()" class="bg-emerald-600 text-white px-4 py-2 rounded-xl font-bold">Test Bright Data</button><button onclick="ownShop('tiktok')" class="border px-4 py-2 rounded-xl font-bold">Toko Saya (TikTok Resmi)</button><button onclick="ownShop('shopee')" class="border px-4 py-2 rounded-xl font-bold">Toko Saya (Shopee Resmi)</button></div><div id="apifyOut" class="text-xs"></div>
+<div class="bg-sky-50 border border-sky-200 rounded-xl p-3 text-xs"><b>🌐 Bright Data:</b> daftar brightdata.com (free 5rb credits/bln) → copy API token + buat kolektor TikTok Shop / Shopee → copy dataset ID (<code>gd_...</code>) ke <code>.env</code> (<code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_*_DATASET</code>). API: <code>POST /datasets/v3/scrape?dataset_id=gd_..</code> max 20 URL sync.<br><b>🏢 API Resmi (hanya toko sendiri!):</b> TikTok: partner.tiktokshop.com → app + scope <code>seller.product.basic</code> → <code>POST /product/202502/products/search</code> pakai <code>x-tts-access-token</code> + <code>shop_cipher</code>. Shopee: open.shopee.com → <code>GET /api/v2/product/get_item_list</code> + AMS Open API untuk kampanye affiliate. Keduanya <b>tidak bisa</b> untuk riset kompetitor — tetap pakai Apify/Bright Data untuk itu.</div></div>
+<div class="bg-white rounded-2xl border p-5 text-sm space-y-2"><div class="font-bold text-base">🚀 Deploy Online (Vercel / Netlify)</div>
+<ol class="list-decimal ml-5 space-y-1 text-slate-600"><li>Install Node.js, copy folder <code>tiktok-shopee-research/</code> ke GitHub</li><li>Vercel → New Project → Import → Deploy (frontend static + <code>api/</code> otomatis)</li><li>Atau Netlify Drop: drag folder ini ke app.netlify.com/drop</li><li>Untuk data real: isi <code>API_KEY</code> scraper (Apify / Bright Data) di backend, jangan scraping langsung dari browser (CORS + banned).</li></ol>
+<div class="flex gap-2 mt-2"><button onclick="backup()" class="border px-3 py-2 rounded-xl font-bold">⬇ Backup Tracking (JSON)</button><button onclick="document.getElementById('imp').click()" class="border px-3 py-2 rounded-xl font-bold">⬆ Restore</button><input id="imp" type="file" class="hidden" onchange="restore(this)"></div>
+<div class="text-xs text-slate-500">User: <b>${(getUser()||{}).name||'-'}</b> • Tracked: <b>${state.tracked.length}</b> produk</div></div></div>`}
+function saveAPI(){const v=document.getElementById('apiUrl').value.trim();localStorage.setItem('tikscope_api',v);checkAPI(true)}
+async function clearAPI(){localStorage.removeItem('tikscope_api');render()}
+async function checkAPI(manual){const base=localStorage.getItem('tikscope_api')||'';const badge=document.getElementById('apiBadge');if(!base){if(badge){badge.textContent='● Mode Demo Lokal';badge.className='text-[11px] font-bold px-2 py-1 rounded-full bg-amber-100 text-amber-700'}return}
+try{const r=await fetch(base+'/api/products?platform='+state.platform+'&limit=3');if(r.ok){if(badge){badge.textContent='● Live API Terhubung';badge.className='text-[11px] font-bold px-2 py-1 rounded-full bg-green-100 text-green-700'}const j=await r.json();if(manual)document.getElementById('apiOut').innerHTML='<span class=text-green-600><b>Terhubung!</b> Dapat '+((j.data||[]).length)+' produk dari backend.</span>';if((j.data||[]).length){mergeLive(j.data)}return}}catch(e){}
+if(badge){badge.textContent='● API Gagal → Demo';badge.className='text-[11px] font-bold px-2 py-1 rounded-full bg-red-100 text-red-600'}if(manual)document.getElementById('apiOut').innerHTML='<span class=text-red-500>Gagal fetch. Cek server.js sudah <code>node server.js</code> + CORS on.</span>'}
+function mergeLive(arr){const norm=arr.slice(0,40).map((x,i)=>({id:'live-'+i,platform:state.platform,cat:x.category||'Beauty',emoji:'🔥',name:x.title||x.name||'Produk Live API',price:+x.price||50000,sold:+x.sold||1000,revenue:(+x.price||50000)*(+x.sold||1000),rating:4.8,growth:50,reviews:1000,shop:x.shop||'Live Shop',comm:10,trend:trendArr(50),created:'live',live:true,video:10}));if(state.platform==='tiktok'){TIKTOK_PRODUCTS.unshift(...norm)}else{SHOPEE_PRODUCTS.unshift(...norm)}render()}
+async function testApify(){const base=localStorage.getItem('tikscope_api')||'';const out=document.getElementById('apifyOut');if(!base){out.innerHTML='<span class=text-red-500>Isi Backend URL dulu di atas.</span>';return}out.textContent='⏳ testing Apify (10-60 detik, 1 run kecil)...';try{const r=await fetch(base+'/api/test-apify');const j=await r.json();out.innerHTML=(j.ok?'<span class=text-green-600><b>'+j.msg+'</b></span>':'<span class=text-red-500>'+j.msg+'</span>')+(j.sample?'<br>Contoh: <code>'+JSON.stringify(j.sample).slice(0,180)+'...</code>':'')}catch(e){out.innerHTML='<span class=text-red-500>Gagal: backend belum jalan? Jalankan <code>node server.js</code>.</span>'}}
+function prov(){return document.getElementById('provSel')?document.getElementById('provSel').value:(localStorage.getItem('tikscope_prov')||'apify')}
+async function provStatus(){const base=localStorage.getItem('tikscope_api')||'';const out=document.getElementById('provOut');if(!base){out.textContent='Isi Backend URL dulu.';return}out.textContent='⏳ cek...';try{const j=await (await fetch(base+'/api/providers')).json();out.innerHTML='<code>'+JSON.stringify(j)+'</code>'}catch(e){out.textContent='Backend belum jalan.'}}
+async function testBD(){const base=localStorage.getItem('tikscope_api')||'';const out=document.getElementById('apifyOut');if(!base){out.textContent='Isi Backend URL dulu.';return}out.textContent='⏳ testing Bright Data...';try{const j=await (await fetch(base+'/api/test-brightdata')).json();out.innerHTML=(j.ok?'<span class=text-green-600><b>'+j.msg+'</b></span>':'<span class=text-red-500>'+j.msg+'</span>')+(j.sample?'<br><code>'+j.sample+'</code>':'')}catch(e){out.textContent='Backend belum jalan.'}}
+async function ownShop(w){const base=localStorage.getItem('tikscope_api')||'';const out=document.getElementById('apifyOut');if(!base){out.textContent='Isi Backend URL dulu.';return}out.textContent='⏳ ambil data toko sendiri via API resmi...';try{const j=await (await fetch(base+'/api/own-shop?which='+w)).json();if(j.data)out.innerHTML='<span class=text-green-600><b>'+j.source+'</b>: '+j.note+'</span> Dapat '+j.data.length+' item toko sendiri.';else out.innerHTML='<span class=text-red-500>'+(j.error||'Gagal')+'</span>'}catch(e){out.textContent='Backend belum jalan.'}}
+function fetchLive(q){const base=localStorage.getItem('tikscope_api')||'';if(!base){alert('Isi Backend URL di ⚙️ API & Deploy dulu');return}localStorage.setItem('tikscope_prov',prov());const market=document.getElementById('countrySel').value==='ID'?'id':document.getElementById('countrySel').value.toLowerCase();fetch(base+'/api/products?platform='+state.platform+'&q='+encodeURIComponent(q||'serum')+'&region='+document.getElementById('countrySel').value+'&market='+market+'&limit=30&provider='+prov()).then(r=>r.json()).then(j=>{if(j.data&&(j.source||'').includes('live')&&j.data.length){mergeLive(j.data);const b=document.getElementById('apiBadge');if(b){b.textContent='● Live '+prov()+': '+j.data.length+' item';b.className='text-[11px] font-bold px-2 py-1 rounded-full bg-green-100 text-green-700'}}else alert('Backend: '+(j.hint||j.error||j.source||'tidak ada data live')+' — cek token di .env')}).catch(()=>alert('Backend belum jalan'))}
+function backup(){const blob=new Blob([JSON.stringify({user:getUser(),tracked:state.tracked},null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='tikscope-backup.json';a.click()}
+function restore(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(j.tracked)state.tracked=j.tracked;if(j.user)localStorage.setItem('tikscope_user',JSON.stringify(j.user));render();alert('Restore sukses!')}catch(e){alert('File invalid')}};r.readAsText(f)}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+document.getElementById('dateRange').addEventListener('change',render);
+render();
+</script>
+</body>
+</html>
