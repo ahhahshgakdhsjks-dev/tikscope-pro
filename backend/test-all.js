@@ -6,7 +6,9 @@
 require('dotenv').config();
 
 const COST = [
-  { provider: 'Apify TikTok (sian.agency)', per1k: 5.00, free: '$5 credit baru (~500-1000 produk)', note: 'Region ID/UK dihapus 26-08-2026 → pakai MY proxy' },
+  { provider: 'Apify TikTok ID (kulqiz, khusus Indonesia)', per1k: 0.99, free: '$5 credit baru (~5000 produk!)', note: 'Sweep kategori shop-id.tokopedia.com + filter lokal. Test 100 produk ≈ $0.10' },
+  { provider: 'Apify TikTok ID (silentflow, 10 negara)', per1k: 5.50, free: '$5 credit baru', note: 'Kategori/URL region id (keyword search-nya US-only). 40+ fields' },
+  { provider: 'Apify TikTok (sian.agency)', per1k: 5.00, free: '$5 credit baru (~500-1000 produk)', note: 'Region ID/UK dihapus 26-08-2026 → dipakai sbg fallback MY proxy' },
   { provider: 'Apify TikTok trending (apivault_labs)', per1k: 3.00, free: '$5 credit baru', note: 'Mode trending:true, best-seller global' },
   { provider: 'Apify Shopee (zen-studio)', per1k: 4.00, free: '$5 credit baru (~1000 produk)', note: 'Estimasi, pay-per-result; tercepat ~1000/2mnt' },
   { provider: 'Bright Data Scraper API', per1k: 7.50, free: '5.000 credits/bln (~$7.50) tanpa kartu', note: 'Pay per successful record; max 20 URL sync' },

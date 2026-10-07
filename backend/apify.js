@@ -78,4 +78,56 @@ async function searchShopee(keyword, market = 'id', limit = 30) {
   }))};
 }
 
-module.exports = { hasToken, runActorSync, searchTikTok, trendingTikTok, searchShopee };
+// --- TikTok Shop INDONESIA (region ID) ---
+// kulqiz/tiktok-shop-scraper: storefront shop-id.tokopedia.com, $0.99/1k.
+// PENTING: storefront ID tidak punya keyword search publik → mode kategori + URL detail.
+// Untuk "search keyword": sweep kategori (maxProducts) lalu filter judul client-side.
+// Input resmi: { crawlCategories, startUrl, maxProducts, crawlSubcategories, productUrls[],
+//   includeReviews, maxReviews, minSold, minRating, minPrice, maxPrice }
+async function sweepTikTokID_Kulqiz({ maxProducts = 150, minSold = 0, minRating = 0, categoryUrl = '', productUrls = [], includeReviews = false } = {}) {
+  const actor = process.env.TIKTOK_ID_ACTOR || 'kulqiz/tiktok-shop-scraper';
+  const input = productUrls.length
+    ? { productUrls, includeReviews, maxReviews: 20 }
+    : { crawlCategories: !categoryUrl, startUrl: categoryUrl || 'https://shop-id.tokopedia.com/',
+        maxProducts: Math.min(maxProducts, 2000), crawlSubcategories: false, minSold, minRating };
+  const { runId, items } = await runActorSync(actor, input, 300);
+  return { runId, actor, data: items.map(x => ({
+    title: x.title || 'Produk ID', price: +(x.sale_price_value ?? String(x.sale_price || '0').replace(/[^0-9]/g, '') ?? 0),
+    sold: +(x.sold_count ?? 0), shop: x.shop_name || 'TikTok Shop ID',
+    rating: +(x.rating || 0), reviews: +(x.review_count || 0),
+    url: x.url || '', image: x.image || '', brand: x.brand || '', region: 'ID'
+  }))};
+}
+
+// silentflow/tiktok-shop-scraper: region 'id'. Keyword search US-only → untuk ID pakai
+// categoryUrls (format shop.tiktok.com/id/c/...) atau productUrls. 40+ fields, $4.50-5.50/1k.
+// Input resmi: { productUrls[], searchKeywords[] (US saja), categoryUrls[], region, maxItems, debugMode }
+async function scrapeTikTokID_Silentflow({ categoryUrls = [], productUrls = [], maxItems = 50 } = {}) {
+  const actor = process.env.TIKTOK_ID_SILENTFLOW || 'silentflow/tiktok-shop-scraper';
+  const { runId, items } = await runActorSync(actor, { productUrls, categoryUrls, region: 'id', maxItems }, 240);
+  return { runId, actor, data: items.map(x => ({
+    title: x.title || x.product_name || 'Produk ID',
+    price: +(x.discounted_price ?? x.price ?? 0), sold: +(x.sold_count ?? x.sales_count ?? 0),
+    shop: x.seller_name || x.shop_name || 'TikTok Shop ID',
+    rating: +(x.rating || 0), reviews: +(x.review_count ?? x.rating_count ?? 0),
+    url: x.product_url || x.productUrl || '', image: x.image || x.image_url || '', region: 'ID'
+  }))};
+}
+
+// "Search" keyword di storefront ID: sweep kulqiz (termurah) + filter judul lokal.
+// Fallback dikerjakan caller (server.js → MY proxy) bila hasil kosong.
+async function searchTikTokID(keyword, limit = 30) {
+  const sweep = await sweepTikTokID_Kulqiz({ maxProducts: Math.min(limit * 4, 300) });
+  const q = (keyword || '').toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const scored = sweep.data.map(p => {
+    const t = (p.title || '').toLowerCase();
+    const hit = words.filter(w => t.includes(w)).length;
+    return { p, hit };
+  }).filter(x => x.hit > 0).sort((a, b) => b.hit - a.hit || b.p.sold - a.p.sold);
+  return { runId: sweep.runId, actor: sweep.actor,
+    notes: `Sweep ID ${sweep.data.length} produk, cocok keyword ${scored.length}. Storefront ID tidak ada keyword search publik, jadi difilter lokal.`,
+    data: scored.slice(0, limit).map(x => x.p) };
+}
+
+module.exports = { hasToken, runActorSync, searchTikTok, trendingTikTok, searchShopee, sweepTikTokID_Kulqiz, scrapeTikTokID_Silentflow, searchTikTokID };

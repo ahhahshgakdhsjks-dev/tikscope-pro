@@ -23,7 +23,7 @@ function mockProducts(platform, q, limit=30){
   return Array.from({length: limit}, (_,i)=>({ title:(q?q+' ':'')+names[i%names.length]+' #'+(i+1), price:20000+Math.floor(Math.random()*200000), sold:500+Math.floor(Math.random()*50000), shop:'Shop-'+(i+1), category:'Beauty' }));
 }
 
-// GET /api/products?platform=tiktok|shopee&q=serum&region=ID&market=id&limit=30&mode=search|trending&provider=apify|brightdata|mock
+// GET /api/products?platform=tiktok|shopee&q=serum&region=ID&market=id&limit=30&mode=search|trending|category&provider=apify|brightdata|mock&actor=auto|kulqiz|silentflow|sian&categoryUrl=..&productUrls=a,b&minSold=0
 app.get('/api/products', async (req,res)=>{
   const platform = (req.query.platform||'tiktok').toLowerCase();
   const q = (req.query.q||req.query.keyword||'serum').toString().slice(0,80);
@@ -32,7 +32,11 @@ app.get('/api/products', async (req,res)=>{
   const market = (req.query.market||'id').toString();
   const mode = (req.query.mode||'search').toString();
   const provider = (req.query.provider||'apify').toString();
-  const key = ck(provider, platform, q.toLowerCase(), region+market+mode, limit);
+  const actor = (req.query.actor||'auto').toString();
+  const categoryUrl = (req.query.categoryUrl||'').toString().slice(0,300);
+  const productUrls = (req.query.productUrls||'').toString().split(',').map(s=>s.trim()).filter(Boolean).slice(0,20);
+  const minSold = +req.query.minSold||0;
+  const key = ck(provider, platform, q.toLowerCase(), region+market+mode+actor+categoryUrl+productUrls.length+minSold, limit);
   const hit = getCache(key);
   if(hit) return res.json({ ...hit, cached:true });
   try{
@@ -44,6 +48,17 @@ app.get('/api/products', async (req,res)=>{
       let out;
       if(platform === 'shopee') out = await apify.searchShopee(q, market, limit);
       else if(mode === 'trending') out = await apify.trendingTikTok(limit);
+      else if(productUrls.length) out = await apify.sweepTikTokID_Kulqiz({ productUrls, includeReviews: true });
+      else if(actor === 'silentflow' && categoryUrl) out = await apify.scrapeTikTokID_Silentflow({ categoryUrls: [categoryUrl], maxItems: limit });
+      else if(mode === 'category' || categoryUrl) out = await apify.sweepTikTokID_Kulqiz({ categoryUrl, maxProducts: limit * 2, minSold });
+      else if(region.toUpperCase() === 'ID' && actor !== 'sian') {
+        // Rantai ID: kulqiz sweep+filter (termurah) → kosong? fallback MY proxy
+        out = await apify.searchTikTokID(q, limit);
+        if (!out.data.length) { const fb = await apify.searchTikTok(q, 'MY', limit); out = { ...fb, notes: (out.notes || '') + ' | Hasil ID kosong, fallback MY proxy.' }; }
+        payload = { source:'apify-live-id', platform, query:q, ...out };
+        setCache(key, payload);
+        return res.json(payload);
+      }
       else out = await apify.searchTikTok(q, region, limit);
       payload = { source:'apify-live', platform, query:q, ...out };
     }
